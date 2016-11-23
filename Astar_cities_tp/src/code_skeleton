@@ -1,0 +1,29 @@
+PATH FINDING ALGORITHM : A*
+---------------------------
+*-----------------------------------------------------------*
+| -> PATH FINDING :                                         |
+|    -> Breadth First Search : using custom Queue           |
+|    -> Dijkstra : using custom priority Queue              |
+|                                                           |
+|    -> A *      : using custom priority Queue              |
+|    -> reconstruct Path                                    |
+|       -> using HEURISTIC : h0, h1, h2, h3, h4             |
+|    *----------------------------------------------------* |
+|    |   -> POPULATE GRAPH : parsing                      | |
+|    |           -> (positions, connections)              | |
+|    |       -> using GRAPH data structure                | |
+|    |           -> VERTEX (NODE) : city                  | |
+|    *----------------------------------------------------* |
+*-----------------------------------------------------------*
+
+
+________________________________________________________________________________
+REFERENCES
+----------
+
+# http://interactivepython.org/runestone/static/pythonds/Graphs/Implementation.html
+# http://www.redblobgames.com/pathfinding/a-star/implementation.html#org1d80056
+# http://stackoverflow.com/questions/3311480/creating-a-python-priority-queue
+# https://www.programiz.com/python-programming/dictionary
+# http://www.python-course.eu/graphs_python.php
+# https://pypi.python.org/pypi/HeapDict
