@@ -1,0 +1,31 @@
+"""
+    EVOLUTIONARY PARADIGM :
+
+    1. initialization
+    2. evaluation           [1]-- -->[2]-- -->[5]
+    3. selection               ^        ˇ
+    4. variation                [4]<-----[3]
+    5. termination
+
+"""
+
+"""
+    START
+"""
+# 1. initialization
+
+"""
+    PROCESSING
+"""
+
+# 2. evaluation [fitness]
+
+# 3. selection [tournament, roulette, deterministic, greedy]
+
+# 4. variation [crossover + mutation] [city exchange, reverse path, replace path]
+
+"""
+    END
+"""
+
+# 5. termination [neuronal network, ant colony, greedy algorithm]
