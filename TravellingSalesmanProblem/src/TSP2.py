@@ -52,77 +52,81 @@ class Cities:
     """
         0.2.  CHROMOSOME : Cities
     """
-    def __init__(self):
-        self.cities = dict()
+    def __init__(self, c_list):
         self.score = 0
+        self.cities_list = c_list
 
-    def city_dictionary_population(self, file):
-        """
-        Populate dictionary containing each gene.
-        :param file: name, x, y
-        :return:
-        """
-        try:
-            city_list = []
-            with open(file, 'r') as openfile:
-
-                # populate list
-                for line in openfile:
-                    name, x, y = line.split(" ")
-                    city_list.append(City(name, x, y))
-
-                # populate dictionary
-                for city in city_list:
-                    self.cities[city.get_name()] = city  # key : name, value : city
-            # print(*self.cities)
-        except IOError:
-            print("Error : file not found")
-
-    def path_generation(self):
-        """
-        Generate a single chromosome.
-        :return: path
-        """
-        cities = list(self.cities.values())  # generate a list containing only Cities' name
-        path = [cities[0].name]  # add first city to head of list
-        sublist = cities[1:len(cities)]  # sublist that doesn't contains the first city
-        shuffle(sublist)  # shuffle sublist
-        for city in sublist:  # iter through shuffled sublist
-            path.append(city.name)  # add it to chromosome
-        path.append(cities[0].name)  # add first city to queue of list
-        # print(path)
-        return path
-
-    def paths_list_generation(self, sample_size):
-        """
-        Generate chromosome population.
-        :param sample_size: population size
-        :return: paths_list
-        """
-        paths_list = []
-        # for each iteration generate a new chromosome
-        for i in range(0, sample_size):
-            paths_list.append(self.path_generation())
-        return paths_list
-
-    def fitness(self, path_list):
+    def fitness(self):
         """
         Calculate a chromosome's path's weight (score)
-        :param path_list: chromosome
         :return:
         """
         # calculate effective score
         score = 0
-        for c in range(0, len(path_list) - 1):
-            city = self.cities.get(path_list[c])  # compare name in dict with city's name
-            city2 = self.cities.get(path_list[c + 1])  # again
+        for c in range(0, len(self.cities_list) - 1):
+            city = cities.get(self.cities_list[c])  # compare name in dict with city's name
+            city2 = cities.get(self.cities_list[c + 1])  # again
             score += weight(city, city2)  # score calculation
         self.score = score
         # print(self.score)
         return self.score
 
-    def selection(self):
-        pass
+    def __str__(self):
+        return str(self.cities_list) + " : " + str(self.score) + "\n"
+
+cities = dict()
+
+
+def city_dictionary_population(file):
+    """
+    Populate dictionary containing each gene.
+    :param file: name, x, y
+    :return:
+    """
+    try:
+        city_list = []
+        with open(file, 'r') as openfile:
+
+            # populate list
+            for line in openfile:
+                name, x, y = line.split(" ")
+                city_list.append(City(name, x, y))
+
+            # populate dictionary
+            for city in city_list:
+                cities[city.get_name()] = city  # key : name, value : city
+                # print(*self.cities)
+    except IOError:
+        print("Error : file not found")
+
+
+def path_generation():
+    """
+    Generate a single chromosome.
+    :return: path
+    """
+    cities_ = list(cities.values())  # generate a list containing only Cities' name
+    path = [cities_[0].name]  # add first city to head of list
+    sublist = cities_[1:len(cities_)]  # sublist that doesn't contains the first city
+    shuffle(sublist)  # shuffle sublist
+    for city in sublist:  # iter through shuffled sublist
+        path.append(city.name)  # add it to chromosome
+    path.append(cities_[0].name)  # add first city to queue of list
+    # print(path)
+    return Cities(path)
+
+
+def paths_list_generation(sample_size):
+    """
+    Generate chromosome population.
+    :param sample_size: population size
+    :return: paths_list
+    """
+    paths_list = []
+    # for each iteration generate a new chromosome
+    for i in range(0, sample_size):
+        paths_list.append(path_generation())
+    return paths_list
 
 
 def weight(city_a, city_b):
@@ -137,16 +141,29 @@ def weight(city_a, city_b):
     return sqrt(x + y)
 
 
-if __name__ == "__main__":
-
-    init = Cities()
-    init.city_dictionary_population("data.txt")
-    chromosomes = init.paths_list_generation(5)
-
+def selection(population):
+    # calculate total weight
     total_weight = 0
 
-    for chromosome in chromosomes:
-        print(chromosome)
-        total_weight += init.fitness(chromosome)
-    print(total_weight)
+    for chromo in chromosomes:
+        total_weight += chromo.fitness()
+    print("Total weight : %f" % total_weight)
+
+    # sort by score (from most to least fit)
+    # print(*population)
+    population = sorted(population, key=lambda c: c.score)
+    print(*population)
+
+
+if __name__ == "__main__":
+
+    city_dictionary_population("data.txt")
+    chromosomes = paths_list_generation(5)  # list of City()s
+    # 1. selection by roulette
+    selection(chromosomes)
+    # 2. crossover
+    # 3. mutation
+    # 4. termination
+
+
 
