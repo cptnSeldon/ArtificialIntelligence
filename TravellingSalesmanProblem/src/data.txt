@@ -1,5 +1,5 @@
-City1 5 5
-City2 7 7
-City3 10 10
-City4 0 0
-City5 2 2
+City1 5 10
+City2 7 14
+City3 10 20
+City4 0 -10
+City5 2 4

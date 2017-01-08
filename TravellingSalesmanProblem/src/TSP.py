@@ -20,7 +20,7 @@ from random import shuffle
 
 class City:
     """
-        01. NODE : City
+        01. GENE : City
     """
     def __init__(self, name, x, y):
         self.name = name
@@ -36,6 +36,15 @@ class City:
     def get_y(self):
         return self.y
 
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) \
+               and self.name == other.name \
+               and self.x == other.x and \
+               self.y == other.y
+
+    def __hash__(self):
+        return hash(self.name) ^ hash(self.x) ^ hash(self.y)
+
     def __str__(self):
         return str(self.name)
 
@@ -46,6 +55,7 @@ class Cities:
     """
     def __init__(self):
         self.cities = []
+        self.score = 0
 
     def get_coordinates(self, file):
         """
@@ -64,52 +74,63 @@ class Cities:
         except IOError:
             print("Error : file not found")
 
-    def generate_chromosome(self, sample_number):
+    def generate_path(self):
         """
-        Generate chromosomes using cities' list
-        :param sample_number:
-        :return:
+        Generate a single path using cities list
+        :return: chromosome
         """
+        chromosome = [self.cities[0].name]  # add first city to head of list
+        sublist = self.cities[1:len(self.cities)]  # sublist that doesn't contains the first city
+        shuffle(sublist)  # shuffle sublist
+        for city in sublist:  # iter through shuffled sublist
+            chromosome.append(city.name)  # add it to chromosome
+        chromosome.append(self.cities[0].name)  # add first city to queue of list
+        print(chromosome)
+        return chromosome
+
+    """def generate_chromosome_set(self, sample_number, chromosome):
         print("Generating chromosomes")
-        chromosomes = []
+        chromosomes = set()
 
         for i in range(0, sample_number):
-            chromosome = [self.cities[0].name]  # add first city to head of list
-            sublist = self.cities[1:len(self.cities)]  # sublist that doesn't contains the first city
-            shuffle(sublist)  # shuffle sublist
-            for city in sublist:  # iter through shuffled sublist
-                chromosome.append(city.name)  # add it to chromosome
-            chromosome.append(self.cities[0].name)  # add first city to queue of list
-            print(chromosome)
-            chromosomes.append(chromosome)
+            if chromosome not in chromosomes:
+                chromosomes.add(chromosome)
 
         # debug
         # print(*chromosomes)
-        return chromosomes
+        return chromosomes"""
 
-    def fitness(self, chromosomes):
+    def selection(self):
+        pass
+
+    def variation(self):
+        pass
+
+    def mutation(self):
+        pass
+
+    def crossover(self):
+        pass
+
+    def fitness(self, chromosome):
         """
         Evaluate chromosome's fitness
-        :param chromosomes:
+        :param chromosome:
         :return:
         """
-        print("Evaluate chromosomes")
-        fitness_score = 0
+        print("Evaluate chromosome")
         chr_dict = {}
 
+        # cities dictionary : needed for weight check found below
         for city in self.cities:
-            chr_dict[city.get_name()] = city
+            chr_dict[city.get_name()] = city    # key : name, value : city
 
-        print(chr_dict.keys())
-
-        for chrom in chromosomes:
-            # print(chrom)
-            fitness_score = 0
-            for c in range(0, len(chrom) - 1):
-                city = chr_dict.get(chrom[c])
-                city2 = chr_dict.get(chrom[c + 1])
-                fitness_score += weight(city, city2)
-            print(fitness_score)
+        # calculate effective score
+        for c in range(0, len(chromosome) - 1):
+            city = chr_dict.get(chromosome[c])  # compare name in dict with city's name
+            city2 = chr_dict.get(chromosome[c + 1])  # again
+            self.score += weight(city, city2)   # score calculation
+        print(self.score)
 
 
 def weight(city_a, city_b):
@@ -128,7 +149,7 @@ if __name__ == "__main__":
 
     init = Cities()
     init.get_coordinates("data.txt")
-    chroma = init.generate_chromosome(3)
+    chroma = init.generate_path()
     init.fitness(chroma)
 
 """
