@@ -143,7 +143,7 @@ def weight(city_a, city_b):
     y = abs(city_a.get_y() - city_b.get_y()) ** 2
     print("x: %r y: %r" % (x, y))
     return sqrt(x + y)
-
+# 
 
 def selection(population):
     # calculate total weight
