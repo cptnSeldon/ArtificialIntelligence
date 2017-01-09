@@ -74,6 +74,12 @@ class Cities:
     def __str__(self):
         return str(self.cities_list) + " : " + str(self.fitness()) + "\n"
 
+    def __getitem__(self, index):
+        return self.cities_list[index]
+
+    def __setitem__(self, index, value):
+        self.cities_list[index] = value
+
 cities = dict()
 
 
@@ -138,6 +144,7 @@ def weight(city_a, city_b):
     """
     x = abs(city_a.get_x() - city_b.get_x()) ** 2
     y = abs(city_a.get_y() - city_b.get_y()) ** 2
+
     #print("x: %r y: %r" % (x, y))
     return sqrt(x + y)
 
@@ -164,6 +171,8 @@ def selection(population):
     random_value = random.uniform(0.0, 1.0) * total_weight
     print(random_value)
     print(*population)
+    # print(random_value)
+    # print(*population)
 
     # locate the closest value in fitness list
     for chromo in population:
@@ -195,6 +204,8 @@ def crossover(population):
                 while ind1[j%size] == False: # on cherche la prochaine ville à droite
                     j += 1
 
+
+
                 ind1[(b+1+i) % size] = ind1[j % size] # remplacement du trou par la ville trouvée
                 ind1[j % size]= False # la ville déplacée devient un trou
 
@@ -212,13 +223,57 @@ def crossover(population):
         population[ind].cities_list = ind1
         population[ind+1].cities_list = ind2
     return population
+def mutation(chromosome):
+    chrom_size = len(cities)
+    a = random.randrange(1, chrom_size-1)
+    b = random.randrange(1, chrom_size-1)
+    print("a: %r b: %r" % (a, b))
+    print("before change : %s" % chromosome)
+    if a != b:
+        chromosome[a], chromosome[b] = chromosome[b], chromosome[a]
+        chromosome.fitness()
+        print("after change : %s" % chromosome)<<<<<<< .mine
 
+            if ind2[(b+1+i)%size]== False: # on cherche un trou
+                j=(b+2+i)%size
+                while ind2[j%size] == False: # on cherche la prochaine ville à droite
+                    j += 1
+
+                ind2[(b+1+i) % size] = ind2[j % size] # remplacement du trou par la ville trouvée
+                ind2[j % size]= False # la ville déplacée devient un trou
+
+        # on rempli les trous en faisant le crossover
+        for i in range(a, b + 1):
+            ind1[i], ind2[i] = temp2[i], temp1[i]
+        population[ind].cities_list = ind1
+        population[ind+1].cities_list = ind2
+    return population
+
+=======
+    a = random.randrange(1, chrom_size-1)
+    b = random.randrange(1, chrom_size-1)
+    print("a: %r b: %r" % (a, b))
+    print("before change : %s" % chromosome)
+    if a != b:
+        chromosome[a], chromosome[b] = chromosome[b], chromosome[a]
+        chromosome.fitness()
+        print("after change : %s" % chromosome)
+
+
+
+
+
+
+
+
+>>>>>>> .theirs
 if __name__ == "__main__":
 
     city_dictionary_population("data.txt")
     chromosomes = paths_list_generation(5)  # list of City()s
     # 1. selection by roulette
-    print(selection(chromosomes))
+    selected_chromosome = selection(chromosomes)
+    # print(selection(chromosomes))
     # 2. crossover
     for chromosome in chromosomes:
         print(chromosome, end="")
@@ -227,6 +282,7 @@ if __name__ == "__main__":
     for chromosome in chromosomes:
         print(chromosome, end="")
     # 3. mutation
+    mutation(selected_chromosome)
     # 4. termination
 
 
