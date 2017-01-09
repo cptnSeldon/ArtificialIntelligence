@@ -9,7 +9,7 @@
 
 """
 from math import sqrt
-from random import *
+import random
 
 
 """
@@ -74,6 +74,12 @@ class Cities:
     def __str__(self):
         return str(self.cities_list) + " : " + str(self.score) + "\n"
 
+    def __getitem__(self, index):
+        return self.cities_list[index]
+
+    def __setitem__(self, index, value):
+        self.cities_list[index] = value
+
 cities = dict()
 
 
@@ -108,7 +114,7 @@ def path_generation():
     cities_ = list(cities.values())  # generate a list containing only Cities' name
     path = [cities_[0].name]  # add first city to head of list
     sublist = cities_[1:len(cities_)]  # sublist that doesn't contains the first city
-    shuffle(sublist)  # shuffle sublist
+    random.shuffle(sublist)  # shuffle sublist
     for city in sublist:  # iter through shuffled sublist
         path.append(city.name)  # add it to chromosome
     path.append(cities_[0].name)  # add first city to queue of list
@@ -138,7 +144,6 @@ def weight(city_a, city_b):
     """
     x = abs(city_a.get_x() - city_b.get_x()) ** 2
     y = abs(city_a.get_y() - city_b.get_y()) ** 2
-    print("x: %r y: %r" % (x, y))
     return sqrt(x + y)
 
 
@@ -161,9 +166,9 @@ def selection(population):
     # population.reverse()
 
     # random number generation
-    random_value = uniform(0.0, 1.0) * total_weight
-    print(random_value)
-    print(*population)
+    random_value = random.uniform(0.0, 1.0) * total_weight
+    # print(random_value)
+    # print(*population)
 
     # locate the closest value in fitness list
     for chromo in population:
@@ -173,14 +178,28 @@ def selection(population):
     return chromo
 
 
+def mutation(chromosome):
+    chrom_size = len(cities)
+    a = random.randrange(1, chrom_size-1)
+    b = random.randrange(1, chrom_size-1)
+    print("a: %r b: %r" % (a, b))
+    print("before change : %s" % chromosome)
+    if a != b:
+        chromosome[a], chromosome[b] = chromosome[b], chromosome[a]
+        chromosome.fitness()
+        print("after change : %s" % chromosome)
+
+
 if __name__ == "__main__":
 
     city_dictionary_population("data.txt")
     chromosomes = paths_list_generation(5)  # list of City()s
     # 1. selection by roulette
-    print(selection(chromosomes))
+    selected_chromosome = selection(chromosomes)
+    # print(selection(chromosomes))
     # 2. crossover
     # 3. mutation
+    mutation(selected_chromosome)
     # 4. termination
 
 
