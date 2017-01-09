@@ -9,7 +9,7 @@
 
 """
 from math import sqrt
-from random import *
+import random
 
 
 """
@@ -72,7 +72,7 @@ class Cities:
         return self.score
 
     def __str__(self):
-        return str(self.cities_list) + " : " + str(self.score) + "\n"
+        return str(self.cities_list) + " : " + str(self.fitness()) + "\n"
 
 cities = dict()
 
@@ -108,7 +108,7 @@ def path_generation():
     cities_ = list(cities.values())  # generate a list containing only Cities' name
     path = [cities_[0].name]  # add first city to head of list
     sublist = cities_[1:len(cities_)]  # sublist that doesn't contains the first city
-    shuffle(sublist)  # shuffle sublist
+    random.shuffle(sublist)  # shuffle sublist
     for city in sublist:  # iter through shuffled sublist
         path.append(city.name)  # add it to chromosome
     path.append(cities_[0].name)  # add first city to queue of list
@@ -138,7 +138,7 @@ def weight(city_a, city_b):
     """
     x = abs(city_a.get_x() - city_b.get_x()) ** 2
     y = abs(city_a.get_y() - city_b.get_y()) ** 2
-    print("x: %r y: %r" % (x, y))
+    #print("x: %r y: %r" % (x, y))
     return sqrt(x + y)
 
 
@@ -161,7 +161,7 @@ def selection(population):
     # population.reverse()
 
     # random number generation
-    random_value = uniform(0.0, 1.0) * total_weight
+    random_value = random.uniform(0.0, 1.0) * total_weight
     print(random_value)
     print(*population)
 
@@ -172,6 +172,46 @@ def selection(population):
             return chromo
     return chromo
 
+def crossover(population):
+    for ind in range(0, len(population) - 1,2) :
+        ind1 = population[ind].cities_list
+        ind2 = population[ind+1].cities_list
+        size = len(ind1)-1 # ne prend pas la dernière ville
+        a, b = random.sample(range(1,size), 2) # ne prend pas la première ville
+        temp1, temp2 =list(ind1), list(ind2) # sauvegarde la liste des villes
+        if a > b:
+            a, b = b, a
+        #remplacement des villes à échanger par un drapeau
+        for i in range(a,b+1):
+            for c in range(1, size):
+                if ind1[c]==temp2[i]:
+                    ind1[c]=False
+                if ind2[c]==temp1[i]:
+                    ind2[c]=False
+        #tassement des villes dans l'ordre à partir du deuxième point de croisement
+        for i in range(size-(b-a+1)):
+            if ind1[(b+1+i)%size]== False: # on cherche un trou
+                j=(b+2+i)%size
+                while ind1[j%size] == False: # on cherche la prochaine ville à droite
+                    j += 1
+
+                ind1[(b+1+i) % size] = ind1[j % size] # remplacement du trou par la ville trouvée
+                ind1[j % size]= False # la ville déplacée devient un trou
+
+            if ind2[(b+1+i)%size]== False: # on cherche un trou
+                j=(b+2+i)%size
+                while ind2[j%size] == False: # on cherche la prochaine ville à droite
+                    j += 1
+
+                ind2[(b+1+i) % size] = ind2[j % size] # remplacement du trou par la ville trouvée
+                ind2[j % size]= False # la ville déplacée devient un trou
+
+        # on rempli les trous en faisant le crossover
+        for i in range(a, b + 1):
+            ind1[i], ind2[i] = temp2[i], temp1[i]
+        population[ind].cities_list = ind1
+        population[ind+1].cities_list = ind2
+    return population
 
 if __name__ == "__main__":
 
@@ -180,6 +220,12 @@ if __name__ == "__main__":
     # 1. selection by roulette
     print(selection(chromosomes))
     # 2. crossover
+    for chromosome in chromosomes:
+        print(chromosome, end="")
+    print("crossover")
+    chromosomes= crossover(chromosomes)
+    for chromosome in chromosomes:
+        print(chromosome, end="")
     # 3. mutation
     # 4. termination
 
