@@ -11,7 +11,6 @@
 from math import sqrt
 import random
 
-
 """
     PREPARATION
 """
@@ -21,6 +20,7 @@ class City:
     """
         01. GENE : City
     """
+
     def __init__(self, name, x, y):
         self.name = name
         self.x = int(x)
@@ -52,6 +52,7 @@ class Cities:
     """
         0.2.  CHROMOSOME : Cities
     """
+
     def __init__(self, c_list):
         self.score = 0
         self.cities_list = c_list
@@ -79,6 +80,7 @@ class Cities:
 
     def __setitem__(self, index, value):
         self.cities_list[index] = value
+
 
 cities = dict()
 
@@ -145,7 +147,7 @@ def weight(city_a, city_b):
     x = abs(city_a.get_x() - city_b.get_x()) ** 2
     y = abs(city_a.get_y() - city_b.get_y()) ** 2
 
-    #print("x: %r y: %r" % (x, y))
+    # print("x: %r y: %r" % (x, y))
     return sqrt(x + y)
 
 
@@ -169,8 +171,6 @@ def selection(population):
 
     # random number generation
     random_value = random.uniform(0.0, 1.0) * total_weight
-    print(random_value)
-    print(*population)
     # print(random_value)
     # print(*population)
 
@@ -181,77 +181,60 @@ def selection(population):
             return chromo
     return chromo
 
+
 def crossover(population):
-    for ind in range(0, len(population) - 1,2) :
+    for ind in range(0, len(population) - 1, 2):
         ind1 = population[ind].cities_list
-        ind2 = population[ind+1].cities_list
-        size = len(ind1)-1 # ne prend pas la dernière ville
-        a, b = random.sample(range(1,size), 2) # ne prend pas la première ville
-        temp1, temp2 =list(ind1), list(ind2) # sauvegarde la liste des villes
+        ind2 = population[ind + 1].cities_list
+        size = len(ind1) - 1  # ne prend pas la dernière ville
+        a, b = random.sample(range(1, size), 2)  # ne prend pas la première ville
+        temp1, temp2 = list(ind1), list(ind2)  # sauvegarde la liste des villes
         if a > b:
             a, b = b, a
-        #remplacement des villes à échanger par un drapeau
-        for i in range(a,b+1):
+        # remplacement des villes à échanger par un drapeau
+        for i in range(a, b+1):
             for c in range(1, size):
-                if ind1[c]==temp2[i]:
-                    ind1[c]=False
-                if ind2[c]==temp1[i]:
-                    ind2[c]=False
-        #tassement des villes dans l'ordre à partir du deuxième point de croisement
-        for i in range(size-(b-a+1)):
-            if ind1[(b+1+i)%size]== False: # on cherche un trou
-                j=(b+2+i)%size
-                while ind1[j%size] == False: # on cherche la prochaine ville à droite
+                if ind1[c] == temp2[i]:
+                    ind1[c] = False
+                if ind2[c] == temp1[i]:
+                    ind2[c] = False
+        # tassement des villes dans l'ordre à partir du deuxième point de croisement
+        for i in range(size - (b - a + 1)):
+            if ind1[(b + 1 + i) % size] == False:  # on cherche un trou
+                j = (b + 2 + i) % size
+                while ind1[j % size] == False or j == 0:  # on cherche la prochaine ville à droite et on ne prend pas en compte la ville de départ
                     j += 1
+                    if j%size == 0: # on ne prend pas en compte la ville de départ
+                        j += 1
+                ind1[(b + 1 + i) % size] = ind1[j % size]  # remplacement du trou par la ville trouvée
+                ind1[j % size] = False  # la ville déplacée devient un trou
 
-
-
-                ind1[(b+1+i) % size] = ind1[j % size] # remplacement du trou par la ville trouvée
-                ind1[j % size]= False # la ville déplacée devient un trou
-
-            if ind2[(b+1+i)%size]== False: # on cherche un trou
-                j=(b+2+i)%size
-                while ind2[j%size] == False: # on cherche la prochaine ville à droite
+            if ind2[(b + 1 + i) % size] == False:  # on cherche un trou
+                j = (b + 2 + i) % size
+                while ind2[j % size] == False or j == 0:  # on cherche la prochaine ville à droite et on ne prend pas en compte la ville de départ
                     j += 1
-
-                ind2[(b+1+i) % size] = ind2[j % size] # remplacement du trou par la ville trouvée
-                ind2[j % size]= False # la ville déplacée devient un trou
-
+                ind2[(b + 1 + i) % size] = ind2[j % size]  # remplacement du trou par la ville trouvée
+                ind2[j % size] = False  # la ville déplacée devient un trou
         # on rempli les trous en faisant le crossover
         for i in range(a, b + 1):
             ind1[i], ind2[i] = temp2[i], temp1[i]
         population[ind].cities_list = ind1
-        population[ind+1].cities_list = ind2
+        population[ind + 1].cities_list = ind2
     return population
+
+
 def mutation(chromosome):
     chrom_size = len(cities)
-    a = random.randrange(1, chrom_size-1)
-    b = random.randrange(1, chrom_size-1)
+    a = random.randrange(1, chrom_size - 1)
+    b = random.randrange(1, chrom_size - 1)
     print("a: %r b: %r" % (a, b))
     print("before change : %s" % chromosome)
     if a != b:
         chromosome[a], chromosome[b] = chromosome[b], chromosome[a]
         chromosome.fitness()
-        print("after change : %s" % chromosome)<<<<<<< .mine
-
-            if ind2[(b+1+i)%size]== False: # on cherche un trou
-                j=(b+2+i)%size
-                while ind2[j%size] == False: # on cherche la prochaine ville à droite
-                    j += 1
-
-                ind2[(b+1+i) % size] = ind2[j % size] # remplacement du trou par la ville trouvée
-                ind2[j % size]= False # la ville déplacée devient un trou
-
-        # on rempli les trous en faisant le crossover
-        for i in range(a, b + 1):
-            ind1[i], ind2[i] = temp2[i], temp1[i]
-        population[ind].cities_list = ind1
-        population[ind+1].cities_list = ind2
-    return population
-
-=======
-    a = random.randrange(1, chrom_size-1)
-    b = random.randrange(1, chrom_size-1)
+        print("after change : %s" % chromosome)
+    a = random.randrange(1, chrom_size - 1)
+    b = random.randrange(1, chrom_size - 1)
     print("a: %r b: %r" % (a, b))
     print("before change : %s" % chromosome)
     if a != b:
@@ -260,13 +243,6 @@ def mutation(chromosome):
         print("after change : %s" % chromosome)
 
 
-
-
-
-
-
-
->>>>>>> .theirs
 if __name__ == "__main__":
 
     city_dictionary_population("data.txt")
@@ -278,12 +254,9 @@ if __name__ == "__main__":
     for chromosome in chromosomes:
         print(chromosome, end="")
     print("crossover")
-    chromosomes= crossover(chromosomes)
+    chromosomes = crossover(chromosomes)
     for chromosome in chromosomes:
         print(chromosome, end="")
     # 3. mutation
     mutation(selected_chromosome)
     # 4. termination
-
-
-
