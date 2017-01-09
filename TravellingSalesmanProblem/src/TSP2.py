@@ -9,7 +9,7 @@
 
 """
 from math import sqrt
-from random import shuffle
+from random import *
 
 
 """
@@ -136,6 +136,7 @@ def weight(city_a, city_b):
     :param city_b:
     :return:
     """
+    # power: use a ** i instead -> time gain
     x = pow(abs(city_a.get_x() - city_b.get_x()), 2)
     y = pow(abs(city_a.get_y() - city_b.get_y()), 2)
     return sqrt(x + y)
@@ -147,12 +148,24 @@ def selection(population):
 
     for chromo in chromosomes:
         total_weight += chromo.fitness()
+
     print("Total weight : %f" % total_weight)
 
-    # sort by score (from most to least fit)
-    # print(*population)
+    # sort by score (descending order)
     population = sorted(population, key=lambda c: c.score)
+    # population.reverse()
+
+    # random number generation
+    random_value = uniform(0.0, 1.0) * total_weight
+    print(random_value)
     print(*population)
+
+    # locate the closest value in fitness list
+    for chromo in population:
+        random_value -= chromo.fitness()
+        if random_value <= 0:
+            return chromo
+    return chromo
 
 
 if __name__ == "__main__":
@@ -160,7 +173,7 @@ if __name__ == "__main__":
     city_dictionary_population("data.txt")
     chromosomes = paths_list_generation(5)  # list of City()s
     # 1. selection by roulette
-    selection(chromosomes)
+    print(selection(chromosomes))
     # 2. crossover
     # 3. mutation
     # 4. termination
