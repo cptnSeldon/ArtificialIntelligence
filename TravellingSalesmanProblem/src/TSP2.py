@@ -137,8 +137,11 @@ def weight(city_a, city_b):
     :return:
     """
     # power: use a ** i instead -> time gain
-    x = pow(abs(city_a.get_x() - city_b.get_x()), 2)
-    y = pow(abs(city_a.get_y() - city_b.get_y()), 2)
+    # x = pow(abs(city_a.get_x() - city_b.get_x()), 2)
+    # y = pow(abs(city_a.get_y() - city_b.get_y()), 2)
+    x = abs(city_a.get_x() - city_b.get_x()) ** 2
+    y = abs(city_a.get_y() - city_b.get_y()) ** 2
+    print("x: %r y: %r" % (x, y))
     return sqrt(x + y)
 
 
