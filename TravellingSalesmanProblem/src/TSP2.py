@@ -1,3 +1,5 @@
+#!/usr/bin/python
+# -*- coding: latin-1 -*-
 """
     EVOLUTIONARY PARADIGM :
 
@@ -252,11 +254,11 @@ if __name__ == "__main__":
     # print(selection(chromosomes))
     # 2. crossover
     for chromosome in chromosomes:
-        print(chromosome, end="")
+        print(chromosome)
     print("crossover")
     chromosomes = crossover(chromosomes)
     for chromosome in chromosomes:
-        print(chromosome, end="")
+        print(chromosome)
     # 3. mutation
     mutation(selected_chromosome)
     # 4. termination
