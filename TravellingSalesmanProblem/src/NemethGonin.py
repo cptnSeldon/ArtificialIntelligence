@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-__author__ = 'jeremy.wirth & jeshon.assuncao'
+__author__ = 'Julia Nemeth et Nicolas Gonin'
 
 import itertools
 import time
@@ -11,6 +11,9 @@ import math
 #valeurs constantes utiles pour le profilage
 MUTATION_RATE=0.01
 
+#Valeurs constantes utiles pour le fonctionnement du programme
+STAGNATION_WAIT_GENERATION = 10
+
 class City:
     """
         01. GENE : City
@@ -20,15 +23,6 @@ class City:
         self.name = name
         self.x = int(x)
         self.y = int(y)
-
-    def get_name(self):
-        return self.name
-
-    def get_x(self):
-        return self.x
-
-    def get_y(self):
-        return self.y
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) \
@@ -42,29 +36,31 @@ class City:
     def __str__(self):
         return str(self.name)
 
+    def __repr__(self):
+        return self.__str__()
+
 class Chromosome:
     def __init__(self, c_list):
-        self.score = self.fitness()
-        self.cities_list = c_list
-
+        self.cities_list = list(c_list)
+        self.score = 0
     #TODO vérifier perfomance et justesse de cette fonction
-    def fitness(self):
+    def calcFitness(self):
         """
         Calculate a chromosome's path's weight (score)
         :return:
         """
         # calculate effective score
         score = 0
-        for c in range(0, len(self.cities_list) - 1):
-            city = cities.get(self.cities_list[c])  # compare name in dict with city's name
-            city2 = cities.get(self.cities_list[c + 1])  # again
+        for i in range(0, len(self.cities_list) - 1):
+            city = self.__getitem__(i)
+            city2 = self.__getitem__(i+1)
             score += self.weight(city, city2)  # score calculation
         self.score = score
         # print(self.score)
         return self.score
 
     def __str__(self):
-        return str(self.cities_list) + " : " + str(self.fitness()) + "\n"
+        return str(self.cities_list) + " : " + str(self.score)
 
     def __getitem__(self, index):
         return self.cities_list[index]
@@ -72,15 +68,18 @@ class Chromosome:
     def __setitem__(self, index, value):
         self.cities_list[index] = value
 
-    def weight(city_a, city_b):
+    def __len__(self):
+        return len(self.cities_list)
+
+    def weight(self, city_a, city_b):
         """
         Calculate path's weight between two cities
         :param city_a:
         :param city_b:
         :return:
         """
-        x = abs(city_a.get_x() - city_b.get_x()) ** 2
-        y = abs(city_a.get_y() - city_b.get_y()) ** 2
+        x = abs(city_a.x - city_b.x) ** 2
+        y = abs(city_a.y - city_b.y) ** 2
 
         # print("x: %r y: %r" % (x, y))
         return sqrt(x + y)
@@ -89,26 +88,34 @@ def ga_solve(file=None, gui=True, maxtime=0):
     if file == None:
         showGame()
     else:
-        openFile = open(file, "r")
-        parseFile(openFile.read())
+        parseFile(file)
+    population = []
+    #Création d'une liste contenant différentes permutations des villes.
+    listCities = list(itertools.islice(itertools.permutations(cities), 50))
 
-    #Création d'une liste contenant différentes permutations des villes. On a donc une liste de chromosomes aka une population
-    population = list(itertools.islice(itertools.permutations(cities), 50))
+    #on a une liste de villes qu'on veut transformer en liste de Chromosome. En même temps une évalutation est faite
+    for chromosome in listCities:
+        chromosome = Chromosome(chromosome)
+        population.append(chromosome)
 
+    # --------------EVALUATION PRELIMINAIRE-------------------------
+    population.sort(key=lambda chromosome: chromosome.calcFitness())
+
+    #variables d'arrêt
     timeStart = time.time()
     actualTime = -1
+    stagnation = False
+    lastScore = population[0].score
+    generationWithoutProgress=0
     #TODO si maxtime n'est pas une valeur positive, la fonction devra s’arrêter lorsqu’on constate une stagnation de l’amélioration des solutions.
-    while actualTime < maxtime:
+    while actualTime < maxtime and stagnation == False:
 
         #---------------DESSIN----------------
         if gui:
-            drawPath()
+            drawPath(population[0].cities_list)
         print(population[0].score)
 
         # A partir de maintenant on va appliquer le processus de séléction génétique.
-
-        # --------------EVALUATION-------------------------
-        population.sort(key=lambda chromosome: chromosome.score)
 
         #---------------SElECTION--------------------------
         # TODO la séléction doit retenir qu'une partie de la population
@@ -117,7 +124,7 @@ def ga_solve(file=None, gui=True, maxtime=0):
         population=[] #hack pour faire de la place à la nouvelle génération
 
         #------------------REPRODUCTION-------------------
-        for i in range(0, len(matingPool) - 1, 2):
+        for i in range(0, 2*len(matingPool), 2):
 
             # choix de deux individus qui vont produire deux enfants
             newChromosome1 = random.choice(matingPool)
@@ -129,13 +136,24 @@ def ga_solve(file=None, gui=True, maxtime=0):
             newChromosome2 = mutation(newChromosome2, MUTATION_RATE)
 
             #Ajout des nouveaux chromosomes dans la nouvelle génération
-            population[i]=newChromosome1
-            population[i+1] = newChromosome2
+            population.append(newChromosome1)
+            population.append(newChromosome2)
 
+            # --------------EVALUATION-------------------------
+            population.sort(key=lambda chromosome: chromosome.score)
+
+        #Conditions d'arrêt
         if maxtime > 0:
             actualTime = time.time() - timeStart
-
-    population.sort(key=lambda chromosome: chromosome.score)
+        else:
+            if lastScore==population[0].score:
+                generationWithoutProgress+=1
+            else:
+                generationWithoutProgress=0
+                lastScore=population[0].score
+            if generationWithoutProgress==STAGNATION_WAIT_GENERATION:
+                stagnation=True
+    pauseGui()
     return population[0].score, population[0].cities_list
 
 def selection(population):
@@ -147,8 +165,8 @@ def selection(population):
     # calculate total weight
     total_weight = 0
 
-    for chromo in chromosomes:
-        total_weight += chromo.fitness()
+    for chromo in population:
+        total_weight += chromo
 
     print("Total weight : %f" % total_weight)
 
@@ -161,9 +179,9 @@ def selection(population):
     # print(random_value)
     # print(*population)
 
-    # locate the closest value in fitness list
+    # locate the closest value in score list
     for chromo in population:
-        random_value -= chromo.fitness()
+        random_value -= chromo.score
         if random_value <= 0:
             return chromo
     return chromo
@@ -177,40 +195,43 @@ def crossover(chromosome1, chromosome2):
         a, b = b, a
     # remplacement des villes à échanger par un drapeau
     for i in range(a, b+1):
-        for c in range(1, size):
+        for c in range(0, size):
             if chromosome1[c] == temp2[i]:
                 chromosome1[c] = False
             if chromosome2[c] == temp1[i]:
                 chromosome2[c] = False
     # tassement des villes dans l'ordre à partir du deuxième point de croisement
-    for i in range(size - (b - a + 1)):
+    for i in range(size-(b-a+1)):
 
         if chromosome1[(b + 1 + i) % size] == False:  # on cherche un trou
-            j = (b + 2 + i) % size
-            while chromosome1[j % size] == False or j == 0:  # on cherche la prochaine ville à droite et on ne prend pas en compte la ville de départ
+            j = (b + 2 + i)
+            while chromosome1[j % size] == False:  # on cherche la prochaine ville à droite
                 j += 1
-                if j%size == 0: # on ne prend pas en compte la ville de départ
-                    j += 1
             chromosome1[(b + 1 + i) % size] = chromosome1[j % size]  # remplacement du trou par la ville trouvée
             chromosome1[j % size] = False  # la ville déplacée devient un trou
 
         if chromosome2[(b + 1 + i) % size] == False:  # on cherche un trou
-            j = (b + 2 + i) % size
-            while chromosome2[j % size] == False or j == 0:  # on cherche la prochaine ville à droite et on ne prend pas en compte la ville de départ
+            j = (b + 2 + i)
+            while chromosome2[j % size] == False:  # on cherche la prochaine ville à droite
                 j += 1
             chromosome2[(b + 1 + i) % size] = chromosome2[j % size]  # remplacement du trou par la ville trouvée
             chromosome2[j % size] = False  # la ville déplacée devient un trou
-
     # on rempli les trous en faisant le crossover
     for i in range(a, b + 1):
         chromosome1[i], chromosome2[i] = temp2[i], temp1[i]
+    for g in chromosome1:
+        if type(g) == bool:
+            raise Exception
+    for g in chromosome2:
+        if type(g) == bool:
+            print("BUG")
     return chromosome1, chromosome2
 
 def mutation(chromosome, probability):
     if(random.randint(0,100) > probability*100):
         chrom_size = len(chromosome.cities_list)
-        a = random.randint(0,chrom_size)
-        b = random.randrange(0,chrom_size)
+        a = random.randint(0,chrom_size-1)
+        b = random.randrange(0,chrom_size-1)
         while b == a:
             b = random.randrange(1, chrom_size - 1)
         chromosome[a], chromosome[b] = chromosome[b], chromosome[a]
@@ -220,15 +241,16 @@ def mutation(chromosome, probability):
 
 
 #Fonctions utiles pour l'affichage graphique et le parsing------------------------------------------------------------
-def parseFile(file):
-    lines = file.split("\n")
+def parseFile(fname):
+    with open(fname) as f:
+        lines = f.readlines()
     for line in lines:
         word = line.split(" ")
-
+        print(line)
         name = word[0]
-        posX = int(word[1])
-        posY = int(word[2])
-        cities.append(City(name, posX, posY))
+        x = int(word[1])
+        y = int(word[2])
+        cities.append(City(name, x, y))
 
 
 def showGame():
@@ -245,8 +267,8 @@ def showGame():
             print "Click at (%d, %d)" % event.pos
 
             name = "v%i" % len(cities)
-            posX, posY = event.pos
-            cities.append(City(name, posX, posY))
+            x, y = event.pos
+            cities.append(City(name, x, y))
             draw(cities)
 
         elif event.type == KEYDOWN and event.key == K_RETURN:  # Key Return press
@@ -254,42 +276,40 @@ def showGame():
 
         pygame.display.flip()  # Repaint
 
-def drawPath():
+def drawPath(listCities):
     draw(cities)
-    listCities = population[0].cities_list
+    #TODO comprendre!
+    #print("drawPath: cities size:",len(cities))
+    #print("drawPath: population size:",len(population))
+    #print("Pourquoi les portées de cities et de population sont-elles différentes alors qu'elles sont toutes deux déclarées dans le main?")
 
     #dessine tout les chemins
     listCityStart = listCities[0]
-    for i in range(1, len(listCities)):
+    for i in range(1, len(listCities)-1):
         listCityEnd = listCities[i]
-        pygame.draw.line(screen, pathColor, (listCityStart.get_x, listCityStart.get_y), (listCityEnd.get_x, listCityEnd.get_y))  # Show path
+        pygame.draw.line(screen, pathColor, (listCityStart.x, listCityStart.y), (listCityEnd.x, listCityEnd.y))  # Show path
         listCityStart = listCityEnd
 
     #ferme la boucle
     listCityStart = listCities[len(listCities)-1]
     listCityEnd = listCities[0]
-    pygame.draw.line(screen, pathColor, (listCityStart.posX, listCityStart.posY), (listCityEnd.posX, listCityEnd.posY))  # Show path
+    pygame.draw.line(screen, pathColor, (listCityStart.x, listCityStart.y), (listCityEnd.x, listCityEnd.y))  # Show path
 
     pygame.display.flip() #refresh
 
-    #pause après avoir dessiné un chemin, enter pour quitter
-    running = True
-    while running:
-        event = pygame.event.poll()
-        if event.type == KEYDOWN and event.key == K_RETURN:
-            running = False
+
 
 def draw(cities):
     screen.fill(0)  # Erase all the screen
 
     i = 0
     for listCity in cities:
-        pygame.draw.circle(screen, listCityColor, (listCity.get_x, listCity.get_y), listCityWidth)  # Show cities
+        pygame.draw.circle(screen, listCityColor, (listCity.x, listCity.y), listCityWidth)  # Show cities
 
         # Show labels of cities
         font = pygame.font.Font(None, 12)
-        text = font.render("%s (%i;%i)" % (listCity.get_name, listCity.get_x, listCity.get_y), True, fontColor)
-        screen.blit(text, (listCity.get_x + 2, listCity.get_y - 10))
+        text = font.render("%s (%i;%i)" % (listCity.name, listCity.x, listCity.y), True, fontColor)
+        screen.blit(text, (listCity.x + 2, listCity.y - 10))
 
         i += 1
 
@@ -300,6 +320,14 @@ def draw(cities):
     screen.blit(text, textRect)
 
     pygame.display.flip()  # Repaint
+
+def pauseGui():
+     #Met la gui en pause. presser enter pour quitter
+        running = True
+        while running:
+            event = pygame.event.poll()
+            if event.type == KEYDOWN and event.key == K_RETURN or event.type == pygame.MOUSEBUTTONDOWN:
+                running = False
 
 if __name__ == "__main__":
     import sys, pygame
@@ -320,5 +348,5 @@ if __name__ == "__main__":
     try:
         ga_solve(str(sys.argv[1]))
     except:
-        ga_solve(None,True,10)
+        ga_solve("data/pb005.txt",True,0)
 
