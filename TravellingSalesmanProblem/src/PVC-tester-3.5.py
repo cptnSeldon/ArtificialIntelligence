@@ -7,7 +7,9 @@ Permet de lancer automatiquement une série de solveurs sur une série de problème
 et génère une grille de résultats au format CSV.
 
 v0.2, Matthieu Amiguet, HE-Arc
-v0.2, Hatem Ghorbel, HE-Arc
+v0.3, hatem Ghorbel, HE-Arc
+
+Python 3.5 Ready, Romain Claret
 '''
 
 # PARAMETRES
@@ -18,7 +20,7 @@ v0.2, Hatem Ghorbel, HE-Arc
 # Ces modules doivent être dans le PYTHONPATH; p.ex. dans le répertoire courant
 
 modules = (
-	"MAA09",
+	"Claret_Visinand",
 	# Éventuellement d'autres modules pour comparer plusieurs versions...
 )
 
@@ -28,12 +30,12 @@ modules = (
 # <maxtime> le temps (en secondes) imparti pour la résolution
 tests = (
     ('data/pb005.txt',1),
-    #~ ('data/pb010.txt',5),
-    #~ ('data/pb010.txt',10),
-    #~ ('data/pb050.txt',30),
-    #~ ('data/pb050.txt',60),
-    #~ ('data/pb100.txt',20),
-    #~ ('data/pb100.txt',90),
+    ('data/pb010.txt',5),
+    ('data/pb010.txt',10),
+    ('data/pb050.txt',30),
+    ('data/pb050.txt',60),
+    ('data/pb100.txt',20),
+    ('data/pb100.txt',90),
 )
 
 # On tolère un dépassement de 5% du temps imparti:
@@ -59,7 +61,9 @@ import os
 from time import time
 from math import hypot
 
-def dist((x1,y1),(x2,y2)):
+def dist(city1,city2):
+    x1,y1 = city1
+    x2,y2 = city2
     return hypot(x2 -x1,y2-y1)
 
 def validate(filename, length, path, duration, maxtime):
@@ -72,15 +76,17 @@ def validate(filename, length, path, duration, maxtime):
     if duration>maxtime * (1+tolerance):
         error += "Timeout (%.2f) " % (duration-maxtime)
     try:
-        cities = dict([(name, (int(x),int(y))) for name,x,y in [l.split() for l in file(filename)]])
+        cities = dict([(name, (int(x),int(y))) for name,x,y in [l.split() for l in open(filename)]])
     except:
+        print(sys.exc_info()[0])
         return "(Validation failed...)"
-    tovisit = cities.keys()
+    tovisit = list(cities.keys())
     
     try:
         totaldist = 0
         for (ci, cj) in zip(path, path[1:] +path[0:1]):
-            totaldist += dist(cities[ci],cities[cj])
+
+            totaldist += dist(cities[ci],  cities[cj])
             tovisit.remove(ci)
             
         if int(totaldist) != int(length):
@@ -89,7 +95,7 @@ def validate(filename, length, path, duration, maxtime):
         error += "City %s does not exist! " % ci
     except ValueError:
         error += "City %s appears twice in %r! " % (ci, path)
-    except Exception, e:
+    except Exception as e:
         error += "Error during validation: %r" % e
     
     if tovisit:
@@ -109,7 +115,7 @@ if __name__ == '__main__':
     outfile.write('Test;')
 
     for m in modules:
-        exec "from %s import ga_solve" % m
+        exec ("from %s import ga_solve" % m)
         solvers[m] = ga_solve
         outfile.write("%s;" % m)
 
@@ -120,7 +126,7 @@ if __name__ == '__main__':
 
     for (filename, maxtime) in tests:
         if verbose: 
-            print "--> %s, %d" % (filename, maxtime)
+            print ("--> %s, %d" % (filename, maxtime))
         # normalisation du nom de fichier (pour l'aspect multi-plateforme)
         filename = os.path.normcase(os.path.normpath(filename))
         # Écriture de l'en-tête de ligne
@@ -128,12 +134,12 @@ if __name__ == '__main__':
         # Appel des solveurs proprement dits, vérification et écriture des résultats
         for m in modules:
             if verbose: 
-                print "## %s" % m
+                print ("## %s" % m)
             try:
                 start = time()
                 length, path = solvers[m](filename, gui, maxtime)
                 duration = time()-start
-            except Exception, e:
+            except Exception as e:
                     outfile.write("%r;" % e)
             except SystemExit:
                 outfile.write("tried to quit!;")
