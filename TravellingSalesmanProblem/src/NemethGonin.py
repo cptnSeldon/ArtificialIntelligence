@@ -8,11 +8,12 @@ from copy import deepcopy
 __author__ = 'Julia Nemeth et Nicolas Gonin'
 
 # valeurs constantes utiles pour le profilage
-MUTATION_RATE = 0.01
-POPULATION_SIZE = 50
+MUTATION_RATE = 0.2
+
+POPULATION_SIZE = 70
 
 # Valeurs constantes utiles pour le fonctionnement du programme
-STAGNATION_WAIT_GENERATION = 10
+STAGNATION_WAIT_GENERATION = 15
 
 
 class City:
@@ -165,7 +166,7 @@ def ga_solve(file=None, gui=True, maxtime=0):
             if generationWithoutProgress == STAGNATION_WAIT_GENERATION:
                 stagnation = True
         nbGeneration += 1
-    print("t=",'%.3f'%(actualTime),"g=", nbGeneration, "s=", int(population[0].score),"chemin=",population[0].cities_list)
+    print("time=",'%.3f'%(actualTime),"generation number=", nbGeneration, "score=", int(population[0].score),"path=",population[0].cities_list)
     if gui:
         pauseGui()
     return population[0].score, population[0].cities_list
@@ -386,3 +387,4 @@ if __name__ == "__main__":
         ga_solve(str(sys.argv[1]))
     except:
         ga_solve("data/pb050.txt", True, 0)
+        # ga_solve(None, True, 0)
