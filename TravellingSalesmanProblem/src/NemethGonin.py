@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-__author__ = 'Julia Nemeth et Nicolas Gonin'
-
 import itertools
 import time
 import random
 from math import sqrt
+from math import hypot
 from copy import deepcopy
+__author__ = 'Julia Nemeth et Nicolas Gonin'
 
 # valeurs constantes utiles pour le profilage
 MUTATION_RATE = 0.01
@@ -31,11 +31,17 @@ class City:
     def __repr__(self):
         return self.__str__()
 
+    # Util pour PVC-tester
     def __eq__(self, other):
-        return isinstance(other, self.__class__) \
-               and self.name == other.name \
-               and self.x == other.x and \
-               self.y == other.y
+        if isinstance(other, self.__class__):
+            return self.name == other.name
+        elif isinstance(other,str):
+            return self.name == other
+        return False
+
+    #Util pour PVC-tester
+    def __hash__(self):
+        return hash(self.name)
 
 
 class Chromosome:
@@ -50,7 +56,7 @@ class Chromosome:
         """
         # calculate effective score
         score = 0
-        for i in range(0, len(self.cities_list) - 2):
+        for i in range(0, len(self.cities_list) - 1):
             city = self.__getitem__(i)
             city2 = self.__getitem__(i + 1)
             score += self.weight(city, city2)  # score calculation
@@ -89,14 +95,16 @@ class Chromosome:
         """
         x = abs(city_a.x - city_b.x) ** 2
         y = abs(city_a.y - city_b.y) ** 2
+
         return sqrt(x + y)
 
 
 def ga_solve(file=None, gui=True, maxtime=0):
+    cities = []
     if file == None:
-        showGame()
+        showGame(cities)
     else:
-        parseFile(file)
+        parseFile(file,cities)
     population = []
     # Création d'une liste contenant différentes permutations des villes.
     listCities = list(itertools.islice(itertools.permutations(cities), POPULATION_SIZE))
@@ -119,8 +127,8 @@ def ga_solve(file=None, gui=True, maxtime=0):
 
         # ---------------DESSIN----------------
         if gui:
-            drawPath(population[0].cities_list)
-        print("Generation:", nbGeneration, "score=", int(population[0].score))
+            drawPath(population[0].cities_list,cities)
+
         # A partir de maintenant on va appliquer le processus de séléction génétique.
 
         # ---------------SElECTION--------------------------
@@ -157,7 +165,9 @@ def ga_solve(file=None, gui=True, maxtime=0):
             if generationWithoutProgress == STAGNATION_WAIT_GENERATION:
                 stagnation = True
         nbGeneration += 1
-    pauseGui()
+    print("t=",'%.3f'%(actualTime),"g=", nbGeneration, "s=", int(population[0].score),"chemin=",population[0].cities_list)
+    if gui:
+        pauseGui()
     return population[0].score, population[0].cities_list
 
 
@@ -226,19 +236,18 @@ def mutation(chromosome, probability):
 
 
 # Fonctions utiles pour l'affichage graphique et le parsing------------------------------------------------------------
-def parseFile(fname):
+def parseFile(fname, cities):
     with open(fname) as f:
         lines = f.readlines()
     for line in lines:
         word = line.split(" ")
-        print(line)
         name = word[0]
         x = int(word[1])
         y = int(word[2])
         cities.append(City(name, x, y))
 
 
-def showGame():
+def showGame(cities):
     draw(cities)
 
     running = True
@@ -262,7 +271,7 @@ def showGame():
         pygame.display.flip()  # Repaint
 
 
-def drawPath(listCities):
+def drawPath(listCities,cities):
     draw(cities)
 
     # dessine tout les chemins
@@ -367,8 +376,6 @@ if __name__ == "__main__":
     pygame.init()
     screenSize = 500
     screen = pygame.display.set_mode((screenSize, screenSize))
-
-    cities = []
 
     pathColor = 0, 0, 255  # Blue
     listCityColor = 255, 0, 0  # Red
