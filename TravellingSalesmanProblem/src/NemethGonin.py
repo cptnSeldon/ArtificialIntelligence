@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
-import itertools
-import time
+from itertools import islice, permutations
+from time import time
 import random
 from math import sqrt
-from math import hypot
 from copy import deepcopy
+import pygame
+from sys import argv
+from pygame.locals import KEYDOWN, K_RETURN
+
 __author__ = 'Julia Nemeth et Nicolas Gonin'
 
 # valeurs constantes utiles pour le profilage
-MUTATION_RATE = 0.2
+MUTATION_RATE = 0.3
 
 POPULATION_SIZE = 70
 
@@ -36,11 +39,11 @@ class City:
     def __eq__(self, other):
         if isinstance(other, self.__class__):
             return self.name == other.name
-        elif isinstance(other,str):
+        elif isinstance(other, str):
             return self.name == other
         return False
 
-    #Util pour PVC-tester
+    # Util pour PVC-tester
     def __hash__(self):
         return hash(self.name)
 
@@ -100,48 +103,55 @@ class Chromosome:
         return sqrt(x + y)
 
 
-def ga_solve(file=None, gui=True, maxtime=0):
+def ga_solve(file=None, gui=True, maxtime=2):
     cities = []
-    if file == None:
+    if file is None:
         showGame(cities)
     else:
-        parseFile(file,cities)
+        parseFile(file, cities)
     population = []
     # Création d'une liste contenant différentes permutations des villes.
-    listCities = list(itertools.islice(itertools.permutations(cities), POPULATION_SIZE))
+    listCities = list(islice(permutations(cities), POPULATION_SIZE))
 
     # on a une liste de villes qu'on veut transformer en liste de Chromosome. En même temps une évalutation est faite
     for chromosome in listCities:
         chromosome = Chromosome(chromosome)
         population.append(chromosome)
 
+    # Séléction gourmande
+    # insertFitChromosomes(population,cities,60)
+
     # --------------EVALUATION PRELIMINAIRE-------------------------
     population.sort(key=lambda chromosome: chromosome.calcFitness())
     # variables d'arrêt
-    timeStart = time.time()
-    actualTime = -1
+    timeStart = time()
+    actualTime = 0
     stagnation = False
     lastScore = population[0].score
     generationWithoutProgress = 0
     nbGeneration = 0
-    while actualTime < maxtime and stagnation == False:
+    if maxtime <= 0:
+        maxtime = float("inf")
+    while actualTime < maxtime and stagnation is False:
 
         # ---------------DESSIN----------------
         if gui:
-            drawPath(population[0].cities_list,cities)
+            drawPath(population[0].cities_list, cities)
 
         # A partir de maintenant on va appliquer le processus de séléction génétique.
 
         # ---------------SElECTION--------------------------
-        # TODO la séléction par roulette est très peu efficace
-        # population=selection(population)  # retient la moitiée des chromosomes
+        # la séléction par roulette + un peu d'élitisme est très peu efficace
+        # matingPool = deepcopy(population[0:5])
+        # matingPool.extend(selection(population))  # retient la moitiée des chromosomes
+
         # elitisme
         matingPoolSize = int(len(population) / 2)
-        population = deepcopy(population[0:matingPoolSize])
+        population = deepcopy(population[:matingPoolSize])
         # ------------------REPRODUCTION-------------------
-        for i in range(0, int(len(population)), 2):
+        for i in range(0, int(matingPoolSize), 2):
             # choix de deux individus qui vont produire deux enfants
-            a, b = random.sample(range(0, len(population)), 2)
+            a, b = random.sample(range(0, matingPoolSize), 2)
             newChromosome1 = deepcopy(population[a])
             newChromosome2 = deepcopy(population[b])
 
@@ -155,21 +165,82 @@ def ga_solve(file=None, gui=True, maxtime=0):
         # --------------EVALUATION-------------------------
         population.sort(key=lambda chromosome: chromosome.calcFitness())
         # Conditions d'arrêt
-        if maxtime > 0:
-            actualTime = time.time() - timeStart
+        actualTime = time() - timeStart
+        if lastScore == population[0].score:
+            generationWithoutProgress += 1
         else:
-            if lastScore == population[0].score:
-                generationWithoutProgress += 1
-            else:
-                generationWithoutProgress = 0
-                lastScore = population[0].score
-            if generationWithoutProgress == STAGNATION_WAIT_GENERATION:
-                stagnation = True
+            generationWithoutProgress = 0
+            lastScore = population[0].score
+        if generationWithoutProgress == STAGNATION_WAIT_GENERATION:
+            stagnation = True
         nbGeneration += 1
-    print("time=",'%.3f'%(actualTime),"generation number=", nbGeneration, "score=", int(population[0].score),"path=",population[0].cities_list)
+        # print("time=",'%.3f'%(actualTime),"generation number=", nbGeneration, "score=", int(population[0].score),"path=",population[0].cities_list)
     if gui:
         pauseGui()
     return population[0].score, population[0].cities_list
+
+
+def insertFitChromosomes(population, cities, n):
+    """
+        Ajoute n Chromosomes formés des gènes trouvés dans cities dans population.
+        Ces Chromosomes sont construits à l'aide de l'algorithme des plus proches voisins puis mutés 3 fois.
+        :param population: liste de Chromosome
+        :param cities: liste de City
+        :param n: nombre de Chromosome à ajouter
+        :return:
+        """
+    indexStartList = []
+    cities_size = len(cities)
+    if n <= cities_size:
+        indexStartList = random.sample(range(cities_size), n)
+    else:
+        for i in range(n):
+            indexStartList.append(random.randint(0, cities_size - 1))
+    for i in range(n):
+        fitChromosome = createFitChromosome(cities, indexStartList[i])
+        mutation(fitChromosome, 100)
+        mutation(fitChromosome, 100)
+        mutation(fitChromosome, 100)
+        population.append(fitChromosome)
+
+
+def createFitChromosome(cities, startIndex):
+    chromosomeSize = len(cities)
+    fitGeneIndiceList = []
+    fitGeneList = []
+    weightList = []
+    fitGeneIndiceList.append(startIndex)
+    for i in range(0, chromosomeSize):  # pour chaque ville on cherche son plus proche voisin
+        currentCity = cities[(startIndex + i) % chromosomeSize]
+        weightList.clear()
+        for j in range(chromosomeSize):  # pour chaque voisin on calcule sa distance
+            if j not in fitGeneIndiceList:  # test si pas déjà ajouté
+                weightList.append(weight(currentCity, cities[j]))
+            else:
+                weightList.append(0)
+        ppvWeight = float("inf")
+        for j in range(chromosomeSize):  # on cherche le plus proche voisin de la ville actuelle.
+            currentWeight = weightList[j]
+            if currentWeight != 0 and currentWeight < ppvWeight:  # test si pas un doublon et meilleur que les précédents
+                ppvWeight = weightList[j]
+                ppvIndice = j
+        fitGeneIndiceList.append(ppvIndice)
+    for i in range(chromosomeSize):  # construction de la liste de ville
+        fitGeneList.append(cities[fitGeneIndiceList[i]])
+    return Chromosome(fitGeneList)
+
+
+def weight(city_a, city_b):
+    """
+    Calculate path's weight between two cities
+    :param city_a:
+    :param city_b:
+    :return:
+    """
+    x = abs(city_a.x - city_b.x) ** 2
+    y = abs(city_a.y - city_b.y) ** 2
+
+    return sqrt(x + y)
 
 
 def selection(population):
@@ -180,16 +251,21 @@ def selection(population):
     """
     total_weight = 0
     newPopulation = []
-    for chromosome in population:
-        total_weight += int(chromosome.score)
+    propability = [0] * len(population)
+    total_weight = sum(chromosome.score for chromosome in population)
+    for chromosome in population:  # Calcule du score relatif
+        chromosome.score /= total_weight
+    for i in range(len(population)):
+        for chromosome in population[:i + 1]:
+            propability[i] += chromosome.score
     for i in range(int(len(population) / 2)):
-        target = random.randint(0, int(total_weight))
+        target = random.random()
         # locate the closest value in score list
-        for chromosome in population:
-            target -= chromosome.score
-            if target <= 0:
+        for (i, chromosome) in enumerate(population):
+            if target <= propability[i]:
                 newPopulation.append(deepcopy(chromosome))
                 break
+    newPopulation.sort(key=lambda chromosome: chromosome.calcFitness())
     return deepcopy(newPopulation)
 
 
@@ -272,7 +348,8 @@ def showGame(cities):
         pygame.display.flip()  # Repaint
 
 
-def drawPath(listCities,cities):
+def drawPath(listCities, cities):
+    screen = pygame.display.set_mode((screenSize, screenSize))
     draw(cities)
 
     # dessine tout les chemins
@@ -291,6 +368,7 @@ def drawPath(listCities,cities):
 
 
 def draw(cities):
+    screen = pygame.display.set_mode((screenSize, screenSize))
     screen.fill(0)  # Erase all the screen
 
     i = 0
@@ -370,21 +448,51 @@ def testCrossover():
     assert (testChromosome2 == targetChromosome2), "crossover incorrecte!"
 
 
-if __name__ == "__main__":
-    import sys, pygame
-    from pygame.locals import KEYDOWN, QUIT, MOUSEBUTTONDOWN, K_RETURN
+def testPerformance(file, targetLength, iteration):
+    """
+   Test la performance de la fonction ga_solve
+   :param file: chemin du fichier à tester
+   :param targetLength: Score minimum que à atteindre
+   :param iteration: nombre de test à effectuer
+   :return:
+   """
+    print("Test de performance")
+    totalDuration = 0
+    totalLength = 0
+    bestDuration = float("inf")
+    bestLength = float("inf")
+    for i in range(iteration):
+        start = time()
+        length, path = ga_solve(file, False, 0)
+        duration = time() - start
+        if duration < bestDuration:
+            bestDuration = duration
+        if length < bestLength:
+            bestLength = length
+        totalDuration += duration
+        totalLength += length
+    print("temps moyen=", '%.3f' % (totalDuration / iteration))
+    print("meilleur temps=", '%.3f' % bestDuration)
+    print("score moyen=", '%.f' % (totalLength / iteration))
+    print("meilleur score=", '%.f' % bestLength)
+    print("consistance={:.1f}%".format((targetLength / (totalLength / iteration)) * 100))
 
+
+if __name__ == "__main__":
     pygame.init()
     screenSize = 500
-    screen = pygame.display.set_mode((screenSize, screenSize))
-
     pathColor = 0, 0, 255  # Blue
     listCityColor = 255, 0, 0  # Red
     fontColor = 255, 255, 255  # White
     listCityWidth = 2  # Width of one point
-    testCrossover()
-    try:
-        ga_solve(str(sys.argv[1]))
-    except:
-        ga_solve("data/pb050.txt", True, 0)
-        # ga_solve(None, True, 0)
+
+    # testCrossover()
+    if True:  # pour le profilage!
+        testPerformance("data/pb010.txt", 1490, 20)
+        # testPerformance("data/pb020.txt", 1869)
+
+    else:
+        try:
+            ga_solve(argv[1], argv[2] is True, float(argv[3]))
+        except:
+            ga_solve("data/pb050.txt", False, 1)
