@@ -11,7 +11,7 @@ from pygame.locals import KEYDOWN, K_RETURN
 __author__ = 'Julia Nemeth et Nicolas Gonin'
 
 # valeurs constantes utiles pour le profilage
-MUTATION_RATE = 0.3
+MUTATION_RATE = 0.2
 
 POPULATION_SIZE = 70
 
@@ -54,19 +54,14 @@ class Chromosome:
         self.score = 0
 
     def calcFitness(self):
-        """
-        Calculate a chromosome's path's weight (score)
-        :return:
-        """
-        # calculate effective score
         score = 0
         for i in range(0, len(self.cities_list) - 1):
             city = self.__getitem__(i)
             city2 = self.__getitem__(i + 1)
-            score += self.weight(city, city2)  # score calculation
+            score += self.weight(city, city2)
         city = self.__getitem__(len(self) - 1)
         city2 = self.__getitem__(0)
-        score += self.weight(city, city2)  # score calculation
+        score += self.weight(city, city2)
         self.score = score
         return score
 
@@ -95,15 +90,14 @@ class Chromosome:
         Calculate path's weight between two cities
         :param city_a:
         :param city_b:
-        :return:
+        :return: path's weight
         """
         x = abs(city_a.x - city_b.x) ** 2
         y = abs(city_a.y - city_b.y) ** 2
-
         return sqrt(x + y)
 
 
-def ga_solve(file=None, gui=True, maxtime=2):
+def ga_solve(file=None, gui=True, maxtime=0):
     cities = []
     if file is None:
         showGame(cities)
@@ -113,16 +107,15 @@ def ga_solve(file=None, gui=True, maxtime=2):
     # Création d'une liste contenant différentes permutations des villes.
     listCities = list(islice(permutations(cities), POPULATION_SIZE))
 
-    # on a une liste de villes qu'on veut transformer en liste de Chromosome. En même temps une évalutation est faite
+    # on a une liste de villes qu'on veut transformer en liste de Chromosome.
     for chromosome in listCities:
         chromosome = Chromosome(chromosome)
         population.append(chromosome)
 
-    # Séléction gourmande
+    # Séléction gourmande: les résultats ne sont pas bons alors nous ne l'avons pas utilisée
     # insertFitChromosomes(population,cities,60)
 
-    # --------------EVALUATION PRELIMINAIRE-------------------------
-    population.sort(key=lambda chromosome: chromosome.calcFitness())
+
     # variables d'arrêt
     timeStart = time()
     actualTime = 0
@@ -132,8 +125,11 @@ def ga_solve(file=None, gui=True, maxtime=2):
     nbGeneration = 0
     if maxtime <= 0:
         maxtime = float("inf")
-    while actualTime < maxtime and stagnation is False:
 
+    # --------------EVALUATION PRELIMINAIRE-------------------------
+    population.sort(key=lambda chromosome: chromosome.calcFitness())
+
+    while actualTime < maxtime and stagnation is False:
         # ---------------DESSIN----------------
         if gui:
             drawPath(population[0].cities_list, cities)
@@ -141,14 +137,16 @@ def ga_solve(file=None, gui=True, maxtime=2):
         # A partir de maintenant on va appliquer le processus de séléction génétique.
 
         # ---------------SElECTION--------------------------
-        # la séléction par roulette + un peu d'élitisme est très peu efficace
+        # la séléction par roulette + un peu d'élitisme est très peu efficace alors nous ne l'avons pas utiliée.
         # matingPool = deepcopy(population[0:5])
         # matingPool.extend(selection(population))  # retient la moitiée des chromosomes
 
-        # elitisme
+        # elitisme pour 50% de la population
         matingPoolSize = int(len(population) / 2)
         population = deepcopy(population[:matingPoolSize])
         # ------------------REPRODUCTION-------------------
+        # On garde la meilleure moitié de la population et on y ajoute des croisements et mutations à partir de
+        # cette même moitié.
         for i in range(0, int(matingPoolSize), 2):
             # choix de deux individus qui vont produire deux enfants
             a, b = random.sample(range(0, matingPoolSize), 2)
@@ -162,8 +160,10 @@ def ga_solve(file=None, gui=True, maxtime=2):
             # Ajout des nouveaux chromosomes dans la nouvelle génération
             population.append(newChromosome1)
             population.append(newChromosome2)
+
         # --------------EVALUATION-------------------------
         population.sort(key=lambda chromosome: chromosome.calcFitness())
+
         # Conditions d'arrêt
         actualTime = time() - timeStart
         if lastScore == population[0].score:
@@ -174,6 +174,7 @@ def ga_solve(file=None, gui=True, maxtime=2):
         if generationWithoutProgress == STAGNATION_WAIT_GENERATION:
             stagnation = True
         nbGeneration += 1
+        #DEBUG
         # print("time=",'%.3f'%(actualTime),"generation number=", nbGeneration, "score=", int(population[0].score),"path=",population[0].cities_list)
     if gui:
         pauseGui()
@@ -187,7 +188,6 @@ def insertFitChromosomes(population, cities, n):
         :param population: liste de Chromosome
         :param cities: liste de City
         :param n: nombre de Chromosome à ajouter
-        :return:
         """
     indexStartList = []
     cities_size = len(cities)
@@ -245,9 +245,9 @@ def weight(city_a, city_b):
 
 def selection(population):
     """
-    Select a chromosome from population using stochastic roulette method
-    :param population: chromosome population
-    :return:
+    Selectionne la moitié de la population à partir de l'algorithme de la roulette
+    :param population: liste de Chromosome
+    :return: nouvelle population
     """
     total_weight = 0
     newPopulation = []
@@ -260,7 +260,6 @@ def selection(population):
             propability[i] += chromosome.score
     for i in range(int(len(population) / 2)):
         target = random.random()
-        # locate the closest value in score list
         for (i, chromosome) in enumerate(population):
             if target <= propability[i]:
                 newPopulation.append(deepcopy(chromosome))
@@ -269,9 +268,18 @@ def selection(population):
     return deepcopy(newPopulation)
 
 
-def crossover(chromosome1, chromosome2):
+def crossover(chromosome1, chromosome2, a=-1,b=-1):
+    """
+        Croisment de deux Chromosomes avec la méthode des deux points. Croisement OX.
+        Il est possible de spécifier les points de croisement.
+        :param chromosome1: premier Chromosome à croiser
+        :param chromosome2: deuxième Chromosome à croiser
+        :param a: premier point de croisement
+        :param b: deuxième point de croisement
+        """
     size = len(chromosome1)
-    a, b = random.sample(range(0, size), 2)
+    if(a <0 or b<0):
+        a, b = random.sample(range(0, size), 2)
     temp1, temp2 = list(chromosome1), list(chromosome2)  # sauvegarde la liste des villes
     if a > b:
         a, b = b, a
@@ -330,11 +338,9 @@ def showGame(cities):
     running = True
     while running:
         event = pygame.event.poll()
-
-        if event.type == pygame.QUIT:  # Quit the game
+        if event.type == pygame.QUIT:
             running = 0
-
-        elif event.type == pygame.MOUSEBUTTONDOWN:  # Click
+        elif event.type == pygame.MOUSEBUTTONDOWN:
             print("Click at (%d, %d)" % event.pos)
 
             name = "v%i" % len(cities)
@@ -342,10 +348,10 @@ def showGame(cities):
             cities.append(City(name, x, y))
             draw(cities)
 
-        elif event.type == KEYDOWN and event.key == K_RETURN:  # Key Return press
+        elif event.type == KEYDOWN and event.key == K_RETURN:
             running = False
 
-        pygame.display.flip()  # Repaint
+        pygame.display.flip()
 
 
 def drawPath(listCities, cities):
@@ -357,30 +363,27 @@ def drawPath(listCities, cities):
     for i in range(1, len(listCities)):
         listCityEnd = listCities[i]
         pygame.draw.line(screen, pathColor, (listCityStart.x, listCityStart.y),
-                         (listCityEnd.x, listCityEnd.y))  # Show path
+                         (listCityEnd.x, listCityEnd.y))
         listCityStart = listCityEnd
 
     # ferme la boucle
     listCityStart = listCities[len(listCities) - 1]
     listCityEnd = listCities[0]
-    pygame.draw.line(screen, pathColor, (listCityStart.x, listCityStart.y), (listCityEnd.x, listCityEnd.y))  # Show path
+    pygame.draw.line(screen, pathColor, (listCityStart.x, listCityStart.y), (listCityEnd.x, listCityEnd.y))
     pygame.display.flip()  # refresh
 
 
 def draw(cities):
     screen = pygame.display.set_mode((screenSize, screenSize))
-    screen.fill(0)  # Erase all the screen
-
+    screen.fill(0)
     i = 0
     for listCity in cities:
-        pygame.draw.circle(screen, listCityColor, (listCity.x, listCity.y), listCityWidth)  # Show cities
+        pygame.draw.circle(screen, listCityColor, (listCity.x, listCity.y), listCityWidth)
         # Show labels of cities
         font = pygame.font.Font(None, 12)
         text = font.render("%s (%i;%i)" % (listCity.name, listCity.x, listCity.y), True, fontColor)
         screen.blit(text, (listCity.x + 2, listCity.y - 10))
         i += 1
-
-    # Show the number of listCity
     font = pygame.font.Font(None, 30)
     text = font.render("Nombre : %i" % len(cities), True, fontColor)
     textRect = text.get_rect()
@@ -390,7 +393,7 @@ def draw(cities):
 
 
 def pauseGui():
-    # Met la gui en pause. presser enter pour quitter
+    # Met la gui en pause. presser enter ou cliquer pour quitter
     running = True
     while running:
         event = pygame.event.poll()
@@ -399,6 +402,9 @@ def pauseGui():
 
 
 def testCrossover():
+    '''
+    Test unitaire de la fonction crossover(chromosome1, chromosome2)
+    '''
     city1 = City("A", 0, 0)
     city2 = City("B", 0, 0)
     city3 = City("C", 0, 0)
@@ -411,39 +417,8 @@ def testCrossover():
     testChromosome2 = [city2, city5, city6, city8, city1, city4, city7, city3]
     targetChromosome1 = [city4, city5, city6, city8, city1, city7, city2, city3]
     targetChromosome2 = [city8, city1, city3, city4, city5, city7, city2, city6]
+    crossover(testChromosome1, testChromosome2, 2, 4)
 
-    size = len(testChromosome1)
-    a, b = (2, 4)
-    temp1, temp2 = list(testChromosome1), list(testChromosome2)  # sauvegarde la liste des villes
-    # remplacement des villes à échanger par un drapeau
-    for i in range(a, b + 1):
-        for c in range(0, size):
-            if testChromosome1[c] == temp2[i]:
-                testChromosome1[c] = False
-            if testChromosome2[c] == temp1[i]:
-                testChromosome2[c] = False
-
-    # tassement des villes dans l'ordre à partir du deuxième point de croisement
-    for i in range(size - (b - a + 1)):
-
-        if testChromosome1[(b + 1 + i) % size] == False:  # on cherche un trou
-            j = (b + 2 + i)
-            while testChromosome1[j % size] == False:  # on cherche la prochaine ville à droite
-                j += 1
-            testChromosome1[(b + 1 + i) % size] = testChromosome1[j % size]  # remplacement du trou par la ville trouvée
-            testChromosome1[j % size] = False  # la ville déplacée devient un trou
-
-        if testChromosome2[(b + 1 + i) % size] == False:  # on cherche un trou
-            j = (b + 2 + i)
-            while testChromosome2[j % size] == False:  # on cherche la prochaine ville à droite
-                j += 1
-            testChromosome2[(b + 1 + i) % size] = testChromosome2[j % size]  # remplacement du trou par la ville trouvée
-            testChromosome2[j % size] = False  # la ville déplacée devient un trou
-    # on rempli les trous en faisant le crossover
-    for i in range(a, b + 1):
-        testChromosome1[i], testChromosome2[i] = temp2[i], temp1[i]
-
-    assert (testChromosome1 == testChromosome1), "assert incorrecte!"
     assert (testChromosome1 == targetChromosome1), "crossover incorrecte!"
     assert (testChromosome2 == targetChromosome2), "crossover incorrecte!"
 
@@ -486,13 +461,13 @@ if __name__ == "__main__":
     fontColor = 255, 255, 255  # White
     listCityWidth = 2  # Width of one point
 
-    # testCrossover()
-    if True:  # pour le profilage!
-        testPerformance("data/pb010.txt", 1490, 20)
-        # testPerformance("data/pb020.txt", 1869)
+    #testCrossover()
+    if False:  # pour le profilage!
+        #testPerformance("data/pb010.txt", 1490, 20)
+        testPerformance("data/pb020.txt", 1869,10)
 
     else:
         try:
-            ga_solve(argv[1], argv[2] is True, float(argv[3]))
+            ga_solve(argv[1], bool(argv[2]) is True, float(argv[3]))
         except:
-            ga_solve("data/pb050.txt", False, 1)
+            print("Paramètres invalides!")
